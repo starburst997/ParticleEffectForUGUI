@@ -75,16 +75,30 @@ namespace Coffee.UIExtensions
                 m_Movement = value;
             }
         }
+        
+        public ParticleSystem particleSystem
+        {
+            get
+            {
+                return m_ParticleSystem;
+            }
+            set
+            {
+                m_ParticleSystem = value;
+                if (!ApplyParticleSystem()) return;
+                enabled = true;
+            }
+        }
 
         private UIParticle _uiParticle;
 
-        private void OnEnable()
+        private bool ApplyParticleSystem()
         {
             if (m_ParticleSystem == null)
             {
                 //Debug.LogError("No particle system attached to particle attractor script", this);
                 enabled = false;
-                return;
+                return false;
             }
 
             _uiParticle = m_ParticleSystem.GetComponentInParent<UIParticle>();
@@ -92,6 +106,13 @@ namespace Coffee.UIExtensions
             {
                 _uiParticle = null;
             }
+
+            return true;
+        }
+        
+        private void OnEnable()
+        {
+            if (!ApplyParticleSystem()) return;
             UIParticleUpdater.Register(this);
         }
 
