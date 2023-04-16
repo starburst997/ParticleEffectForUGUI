@@ -15,6 +15,10 @@ namespace Coffee.UIExtensions
             Sphere,
         }
 
+        public bool Fade = true;
+        public float MaxDistance = 0.25f;
+        public Vector3 DestinationOffset;
+        
         [SerializeField]
         private ParticleSystem m_ParticleSystem;
 
@@ -78,7 +82,7 @@ namespace Coffee.UIExtensions
         {
             if (m_ParticleSystem == null)
             {
-                Debug.LogError("No particle system attached to particle attractor script", this);
+                //Debug.LogError("No particle system attached to particle attractor script", this);
                 enabled = false;
                 return;
             }
@@ -107,27 +111,18 @@ namespace Coffee.UIExtensions
             var particles = ParticleSystemExtensions.GetParticleArray(count);
             m_ParticleSystem.GetParticles(particles, count);
 
-            var dstPos = GetDestinationPosition();
+            var dstPos = GetDestinationPosition() + DestinationOffset;
             for (var i = 0; i < count; i++)
             {
                 // Attracted
                 var p = particles[i];
-                if (0f < p.remainingLifetime && Vector3.Distance(p.position, dstPos) < m_DestinationRadius)
+                var distance = Vector3.Distance(p.position, dstPos);
+                if (0f < p.remainingLifetime && distance < m_DestinationRadius)
                 {
                     p.remainingLifetime = 0f;
                     particles[i] = p;
 
-                    if (m_OnAttracted != null)
-                    {
-                        try
-                        {
-                            m_OnAttracted.Invoke();
-                        }
-                        catch (Exception e)
-                        {
-                            Debug.LogException(e);
-                        }
-                    }
+                    m_OnAttracted?.Invoke();
                     continue;
                 }
 
@@ -142,6 +137,15 @@ namespace Coffee.UIExtensions
                 // Attract
                 p.position = GetAttractedPosition(p.position, dstPos, duration, time);
                 p.velocity *= 0.5f;
+                
+                // When close to the destination, fade color / scale
+                if (Fade && distance < MaxDistance)
+                {
+                    var perc = distance / MaxDistance;
+                    p.startColor = new Color32(p.startColor.r, p.startColor.g, p.startColor.b, (byte) (perc * 0xFF));
+                    p.startSize = perc;
+                }
+
                 particles[i] = p;
             }
 
