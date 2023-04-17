@@ -38,7 +38,7 @@ namespace Coffee.UIExtensions
         private Movement m_Movement;
 
         [SerializeField]
-        private UnityEvent m_OnAttracted;
+        private UnityEvent<bool> m_OnAttracted;
 
         public float delay
         {
@@ -91,6 +91,7 @@ namespace Coffee.UIExtensions
         }
 
         private UIParticle _uiParticle;
+        private float _delayDeactivate;
 
         private bool ApplyParticleSystem()
         {
@@ -121,17 +122,17 @@ namespace Coffee.UIExtensions
             _uiParticle = null;
             UIParticleUpdater.Unregister(this);
         }
-
+        
         internal void Attract()
         {
             if (m_ParticleSystem == null) return;
-
+            
             var count = m_ParticleSystem.particleCount;
             if (count == 0) return;
 
             var particles = ParticleSystemExtensions.GetParticleArray(count);
             m_ParticleSystem.GetParticles(particles, count);
-
+            
             var dstPos = GetDestinationPosition() + DestinationOffset;
             for (var i = 0; i < count; i++)
             {
@@ -142,8 +143,8 @@ namespace Coffee.UIExtensions
                 {
                     p.remainingLifetime = 0f;
                     particles[i] = p;
-
-                    m_OnAttracted?.Invoke();
+                    
+                    m_OnAttracted?.Invoke(count <= 1);
                     continue;
                 }
 
@@ -157,7 +158,10 @@ namespace Coffee.UIExtensions
 
                 // Attract
                 p.position = GetAttractedPosition(p.position, dstPos, duration, time);
-                p.velocity *= 0.5f;
+                
+                //p.velocity *= 0.5f;
+                
+                //if (distance > 4f) p.velocity = dstPos - p.position;
                 
                 // When close to the destination, fade color / scale
                 if (Fade && distance < MaxDistance)
@@ -178,6 +182,7 @@ namespace Coffee.UIExtensions
             var isUI = _uiParticle && _uiParticle.enabled;
             var psPos = m_ParticleSystem.transform.position;
             var attractorPos = transform.position;
+            
             var dstPos = attractorPos;
             if (m_ParticleSystem.main.simulationSpace == ParticleSystemSimulationSpace.Local)
             {
@@ -186,6 +191,8 @@ namespace Coffee.UIExtensions
                 {
                     dstPos = dstPos.GetScaled(_uiParticle.transform.localScale, _uiParticle.scale3D.Inverse());
                 }
+
+                dstPos.z = 0;
             }
             else
             {
@@ -221,7 +228,7 @@ namespace Coffee.UIExtensions
                     target = Vector3.Slerp(current, target, time / duration);
                     break;
             }
-
+            
             return Vector3.MoveTowards(current, target, speed);
         }
 
