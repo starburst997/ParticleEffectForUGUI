@@ -139,7 +139,7 @@ namespace Coffee.UIExtensions
                 // Attracted
                 var p = particles[i];
                 var distance = Vector3.Distance(p.position, dstPos);
-                if (0f < p.remainingLifetime && distance < m_DestinationRadius)
+                if (0f < p.remainingLifetime && distance < m_DestinationRadius || !gameObject.activeInHierarchy)
                 {
                     p.remainingLifetime = 0f;
                     particles[i] = p;
