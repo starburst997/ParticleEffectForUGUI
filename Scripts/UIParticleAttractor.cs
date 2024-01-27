@@ -122,6 +122,28 @@ namespace Coffee.UIExtensions
             _uiParticle = null;
             UIParticleUpdater.Unregister(this);
         }
+
+        public void KillAll()
+        {
+            if (m_ParticleSystem == null) return;
+            
+            var count = m_ParticleSystem.particleCount;
+            if (count == 0) return;
+            
+            var particles = ParticleSystemExtensions.GetParticleArray(count);
+            m_ParticleSystem.GetParticles(particles, count);
+            
+            for (var i = 0; i < count; i++)
+            {
+                var p = particles[i];
+                p.remainingLifetime = 0f;
+                particles[i] = p;
+                    
+                m_OnAttracted?.Invoke(count <= 1);
+            }
+            
+            m_ParticleSystem.SetParticles(particles, count);
+        }
         
         internal void Attract()
         {
@@ -139,7 +161,7 @@ namespace Coffee.UIExtensions
                 // Attracted
                 var p = particles[i];
                 var distance = Vector3.Distance(p.position, dstPos);
-                if (0f < p.remainingLifetime && distance < m_DestinationRadius || !gameObject.activeInHierarchy)
+                if (0f < p.remainingLifetime && distance < m_DestinationRadius)
                 {
                     p.remainingLifetime = 0f;
                     particles[i] = p;
