@@ -2,7 +2,6 @@
 #define SERIALIZE_FIELD_MASKABLE
 #endif
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using Coffee.UIParticleExtensions;
 using UnityEngine;
@@ -323,7 +322,17 @@ namespace Coffee.UIExtensions
         {
             if (!isActiveAndEnabled) return;
 
-            if (m_Renderers.Any(x => !x))
+            var any = false;
+            foreach (var x in m_Renderers)
+            {
+                if (!x)
+                {
+                    any = true;
+                    break;
+                }
+            }
+            
+            if (any)
             {
                 RefreshParticles(particles);
             }
