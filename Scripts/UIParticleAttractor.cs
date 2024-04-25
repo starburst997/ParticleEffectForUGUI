@@ -21,6 +21,10 @@ namespace Coffee.UIExtensions
             UnscaledTime
         }
 
+        public bool Fade = true;
+        public float MaxDistance = 0.25f;
+        public Vector3 DestinationOffset;
+        
         [SerializeField]
         private ParticleSystem m_ParticleSystem;
 
@@ -43,9 +47,10 @@ namespace Coffee.UIExtensions
         private UpdateMode m_UpdateMode;
 
         [SerializeField]
-        private UnityEvent m_OnAttracted;
+        private UnityEvent<bool> m_OnAttracted;
 
         private UIParticle _uiParticle;
+        private float _delayDeactivate;
 
         public float destinationRadius
         {
@@ -77,7 +82,7 @@ namespace Coffee.UIExtensions
             set { m_UpdateMode = value; }
         }
 
-        public UnityEvent onAttracted
+        public UnityEvent<bool> onAttracted
         {
             get { return m_OnAttracted; }
             set { m_OnAttracted = value; }
@@ -93,13 +98,14 @@ namespace Coffee.UIExtensions
             set
             {
                 m_ParticleSystem = value;
-                ApplyParticleSystem();
+                if (!ApplyParticleSystem()) return;
+                enabled = true;
             }
         }
 
         private void OnEnable()
         {
-            ApplyParticleSystem();
+            if (!ApplyParticleSystem()) return;
             UIParticleUpdater.Register(this);
         }
 
@@ -113,6 +119,28 @@ namespace Coffee.UIExtensions
             _uiParticle = null;
             m_ParticleSystem = null;
         }
+        
+        public void KillAll()
+        {
+            if (m_ParticleSystem == null) return;
+
+            var count = m_ParticleSystem.particleCount;
+            if (count == 0) return;
+
+            var particles = ParticleSystemExtensions.GetParticleArray(count);
+            m_ParticleSystem.GetParticles(particles, count);
+
+            for (var i = 0; i < count; i++)
+            {
+                var p = particles[i];
+                p.remainingLifetime = 0f;
+                particles[i] = p;
+
+                m_OnAttracted?.Invoke(count <= 1);
+            }
+
+            m_ParticleSystem.SetParticles(particles, count);
+        }
 
         internal void Attract()
         {
@@ -124,28 +152,18 @@ namespace Coffee.UIExtensions
             var particles = ParticleSystemExtensions.GetParticleArray(count);
             m_ParticleSystem.GetParticles(particles, count);
 
-            var dstPos = GetDestinationPosition();
+            var dstPos = GetDestinationPosition() + DestinationOffset;
             for (var i = 0; i < count; i++)
             {
                 // Attracted
                 var p = particles[i];
-                if (0f < p.remainingLifetime && Vector3.Distance(p.position, dstPos) < m_DestinationRadius)
+                var distance = Vector3.Distance(p.position, dstPos);
+                if (0f < p.remainingLifetime && distance < m_DestinationRadius)
                 {
                     p.remainingLifetime = 0f;
                     particles[i] = p;
 
-                    if (m_OnAttracted != null)
-                    {
-                        try
-                        {
-                            m_OnAttracted.Invoke();
-                        }
-                        catch (Exception e)
-                        {
-                            Debug.LogException(e);
-                        }
-                    }
-
+                    m_OnAttracted?.Invoke(count <= 1);
                     continue;
                 }
 
@@ -159,7 +177,18 @@ namespace Coffee.UIExtensions
 
                 // Attract
                 p.position = GetAttractedPosition(p.position, dstPos, duration, time);
-                p.velocity *= 0.5f;
+                //p.velocity *= 0.5f;
+                
+                //if (distance > 4f) p.velocity = dstPos - p.position;
+
+                // When close to the destination, fade color / scale
+                if (Fade && distance < MaxDistance)
+                {
+                    var perc = distance / MaxDistance;
+                    p.startColor = new Color32(p.startColor.r, p.startColor.g, p.startColor.b, (byte) (perc * 0xFF));
+                    p.startSize = perc;
+                }
+                
                 particles[i] = p;
             }
 
@@ -183,7 +212,8 @@ namespace Coffee.UIExtensions
             {
                 var inverseScale = _uiParticle.parentScale.Inverse();
                 dstPos = dstPos.GetScaled(inverseScale, _uiParticle.scale3D.Inverse());
-
+                dstPos.z = 0;
+                
                 // Relative mode
                 if (_uiParticle.positionMode == UIParticle.PositionMode.Relative)
                 {
@@ -233,7 +263,7 @@ namespace Coffee.UIExtensions
             return Vector3.MoveTowards(current, target, speed);
         }
 
-        private void ApplyParticleSystem()
+        private bool ApplyParticleSystem()
         {
             _uiParticle = null;
             if (m_ParticleSystem == null)
@@ -242,17 +272,19 @@ namespace Coffee.UIExtensions
                 if (Application.isPlaying)
 #endif
                 {
-                    Debug.LogError("No particle system attached to particle attractor script", this);
+                    //Debug.LogError("No particle system attached to particle attractor script", this);
                 }
 
-                return;
+                return false;
             }
 
-            _uiParticle = m_ParticleSystem.GetComponentInParent<UIParticle>(true);
+            _uiParticle = (UIParticle) m_ParticleSystem.gameObject.GetComponentInParent(typeof(UIParticle), true);
             if (_uiParticle && !_uiParticle.particles.Contains(m_ParticleSystem))
             {
                 _uiParticle = null;
             }
+            
+            return true;
         }
     }
 }
