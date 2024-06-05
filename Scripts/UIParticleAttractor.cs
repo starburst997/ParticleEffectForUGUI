@@ -136,7 +136,7 @@ namespace Coffee.UIExtensions
                 p.remainingLifetime = 0f;
                 particles[i] = p;
 
-                m_OnAttracted?.Invoke(count <= 1);
+                m_OnAttracted?.Invoke(count-- <= 1);
             }
 
             m_ParticleSystem.SetParticles(particles, count);
@@ -163,7 +163,7 @@ namespace Coffee.UIExtensions
                     p.remainingLifetime = 0f;
                     particles[i] = p;
 
-                    m_OnAttracted?.Invoke(count <= 1);
+                    m_OnAttracted?.Invoke(count-- <= 1);
                     continue;
                 }
 
