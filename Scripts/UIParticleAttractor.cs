@@ -130,13 +130,14 @@ namespace Coffee.UIExtensions
             var particles = ParticleSystemExtensions.GetParticleArray(count);
             m_ParticleSystem.GetParticles(particles, count);
 
+            var totalCount = count;
             for (var i = 0; i < count; i++)
             {
                 var p = particles[i];
                 p.remainingLifetime = 0f;
                 particles[i] = p;
 
-                m_OnAttracted?.Invoke(count-- <= 1);
+                m_OnAttracted?.Invoke(totalCount-- <= 1);
             }
 
             m_ParticleSystem.SetParticles(particles, count);
@@ -152,6 +153,7 @@ namespace Coffee.UIExtensions
             var particles = ParticleSystemExtensions.GetParticleArray(count);
             m_ParticleSystem.GetParticles(particles, count);
 
+            var totalCount = count;
             var dstPos = GetDestinationPosition() + DestinationOffset;
             for (var i = 0; i < count; i++)
             {
@@ -163,7 +165,7 @@ namespace Coffee.UIExtensions
                     p.remainingLifetime = 0f;
                     particles[i] = p;
 
-                    m_OnAttracted?.Invoke(count-- <= 1);
+                    m_OnAttracted?.Invoke(totalCount-- <= 1);
                     continue;
                 }
 
